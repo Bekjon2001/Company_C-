@@ -1,0 +1,48 @@
+# Build results
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Rider
+.idea/
+
+# VS Code
+.vscode/
+
+# ASP.NET temporary folders
+**/App_Data/
+
+# Entity Framework
+Migrations/
+**/__EFMigrationsHistory
+
+# Logs and databases
+*.log
+*.db
+
+# Secrets
+secrets.json
+
+# NuGet packages
+*.nupkg
+*.snupkg
+packages/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test results
+TestResults/
+coverage*/
+
+# Others
+*.cache
+*.bak
+*.swp
