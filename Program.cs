@@ -17,6 +17,10 @@ using Company.Converters;
 using Company.Repository.Leaves;
 using Company.Repository.Projects;
 using Company.Repository.Salaries;
+using Company.Mapping;
+using AutoMapper;
+using OfficeOpenXml;
+//using OfficeOpenXml.LicenseContext; // 🔹 Litsenziya context uchun
 
 namespace Company
 {
@@ -33,7 +37,6 @@ namespace Company
                 .WriteTo.Console()
                 .WriteTo.Seq("http://localhost:5341") // agar Seq o‘rnatilgan bo‘lsa
                 .CreateLogger();
-
 
             var builder = WebApplication.CreateBuilder(args);
 
@@ -54,6 +57,8 @@ namespace Company
             // Serilog'ni ASP.NET Core hosting'ga biriktirish
             builder.Host.UseSerilog();
 
+            //AutoMapper
+            builder.Services.AddAutoMapper(typeof(MappingProfile));
 
             // AppSettings ni DI orqali sozlash
             builder.Services.Configure<AppSettings>(builder.Configuration.GetSection("AppSettings"));
@@ -65,6 +70,7 @@ namespace Company
                         options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault;
                         options.JsonSerializerOptions.Converters.Add(new DateOnlyJsonConverter());
                     });
+
             builder.Services.AddEndpointsApiExplorer();
 
             // MiniProfiler
@@ -77,7 +83,6 @@ namespace Company
             // Swagger
             builder.Services.AddSwaggerGen(c =>
             {
-
                 c.SwaggerDoc("v1", new OpenApiInfo
                 {
                     Title = "Company API",
@@ -88,8 +93,6 @@ namespace Company
                 // XML hujjatlarni qo‘shish
                 var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
                 var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-                //c.IncludeXmlComments(xmlPath);
-
                 if (File.Exists(xmlPath))
                 {
                     c.IncludeXmlComments(xmlPath);
@@ -102,16 +105,13 @@ namespace Company
 
             var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
             var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-           
-        
+
             var constr = builder.Configuration.GetValue<string>("AppSettings:Postgres:ConnectionString");
 
-
             builder.Services.AddDbContext<DbContextdta>(options =>
-            options.UseNpgsql(constr)
-            .EnableSensitiveDataLogging()
-            .EnableDetailedErrors());
-            //.UseLoggerFactory(MiniProfilerEFLoggerFactory.Current));
+                options.UseNpgsql(constr)
+                    .EnableSensitiveDataLogging()
+                    .EnableDetailedErrors());
 
             // Repository registratsiyasi
             builder.Services.AddScoped<ICopanyRepositoriy, DataCompany>();
@@ -124,7 +124,6 @@ namespace Company
             builder.Services.AddScoped<IProjectRepository, DataProject>();
             builder.Services.AddScoped<ISalarieRepositoriy, DataSalarie>();
 
-
             // CORS sozlamalari
             builder.Services.AddCors(options =>
             {
@@ -136,6 +135,10 @@ namespace Company
                 });
             });
 
+            // ✅ EPPlus 8.x litsenziyasini o‘rnatish
+            //ExcelPackage.License = new EPPlusLicense("NonCommercial");
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
             var app = builder.Build();
 
             // Swagger faqat development rejimida
@@ -145,22 +148,19 @@ namespace Company
                 app.UseSwaggerUI();
             }
 
+            app.UseSwagger();
+            app.UseSwaggerUI(c =>
+            {
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "API v1");
+            });
+
             // Xato boshqaruvi
             if (app.Environment.IsDevelopment())
             {
-                app.UseDeveloperExceptionPage(); 
+                app.UseDeveloperExceptionPage();
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
-            //app.UseExceptionHandler(errorApp =>
-            //{
-            //    errorApp.Run(async context =>
-            //    {
-            //        context.Response.StatusCode = 500;
-            //        context.Response.ContentType = "application/json";
-            //        await context.Response.WriteAsync("{\"error\": \"An unexpected error occurred.\"}");
-            //    });
-            //});
 
             app.UseHttpsRedirection();
             app.UseMiniProfiler();
@@ -174,10 +174,10 @@ namespace Company
                 var dbContext = scope.ServiceProvider.GetRequiredService<DbContextdta>();
                 DataSeeder.Seed(dbContext);
             }
-            app.Run();
 
-
+            //app.Run();
         }
     }
 }
+
 

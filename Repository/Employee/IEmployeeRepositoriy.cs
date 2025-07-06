@@ -10,5 +10,6 @@ public interface IEmployeeRepositoriy
     bool Delete(int id);
     EmployeeDto GetById(int id);
     List<EmployeeDto> GetAll(EmployeeFilterDto filter);
-
+    Task<int> ImportFromExcelAsync(IFormFile file);
+    Task<byte[]> ExportToExcelAsync();
 }

@@ -1,7 +1,10 @@
-﻿using Company.Dtos.FilterDto;
+﻿using Company.Data.AvtoGenerate.Entity;
+using Company.Dtos.FilterDto;
+using Company.Repository.DtosExxsil;
 using Company.Repository.Employee;
 using Company.Repository.Employee.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Company.API.EmployeeControllers;
 [Route("api/[controller]/[action]")]
@@ -67,5 +70,28 @@ public class EmployeeController: ControllerBase
         var employees = _employeeRepositoriy.GetAll(filter);
         return Ok(employees); 
     }
+
+    [HttpPost]
+    [Consumes("multipart/form-data")] // ⚠️ Bu kerak!
+    public async Task<IActionResult> ImportExcel([FromForm] UploadExcelDto dto)
+    {
+        if (dto.File == null || dto.File.Length == 0)
+            return BadRequest("Fayl yuborilmadi.");
+
+        var count = await _employeeRepositoriy.ImportFromExcelAsync(dto.File);
+        return Ok($"{count} ta xodim import qilindi.");
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> ExportExcel()
+    {
+        var fileBytes = await _employeeRepositoriy.ExportToExcelAsync();
+        return File(fileBytes,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "Employees.xlsx");
+    }
+
+
+
 
 }

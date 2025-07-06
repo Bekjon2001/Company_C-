@@ -4,7 +4,7 @@ using Company.Dtos.FilterDto;
 using Company.Repository.Employee;
 using Company.Repository.Employee.Models;
 using Microsoft.EntityFrameworkCore;
-using System.Linq;
+using OfficeOpenXml;
 
 namespace Company.Data;
 
@@ -140,5 +140,79 @@ public class DataEmployee : IEmployeeRepositoriy
 
         return result;
     }
+
+    public async Task<int> ImportFromExcelAsync(IFormFile file)
+    {
+        if (file == null || file.Length == 0)
+            return 0;
+
+        using var stream = new MemoryStream();
+        await file.CopyToAsync(stream);
+        using var package = new ExcelPackage(stream);
+        var worksheet = package.Workbook.Worksheets[0];
+        int rowCount = worksheet.Dimension.Rows;
+
+        var employees = new List<Employee>();
+
+        for (int row = 2; row <= rowCount; row++)
+        {
+            var employee = new Employee
+            {
+                FirstName = worksheet.Cells[row, 1].Text,
+                LastName = worksheet.Cells[row, 2].Text,
+                Email = worksheet.Cells[row, 3].Text,
+                Phone = worksheet.Cells[row, 4].Text,
+                Hiredate = DateTime.TryParse(worksheet.Cells[row, 5].Text, out var hd) ? hd : null,
+                DateOfBirth = DateTime.TryParse(worksheet.Cells[row, 6].Text, out var dob) ? dob : null,
+                Address = worksheet.Cells[row, 7].Text,
+                CompanyId = int.Parse(worksheet.Cells[row, 8].Text),
+                DepartmentId = int.Parse(worksheet.Cells[row, 9].Text),
+                PositionId = int.Parse(worksheet.Cells[row, 10].Text),
+                CreatedAt = DateTime.Now,
+                UpdatedAt = DateTime.Now
+            };
+
+            employees.Add(employee);
+        }
+
+        _context.Employee.AddRange(employees);
+        return await _context.SaveChangesAsync();
+    }
+
+    public async Task<byte[]> ExportToExcelAsync()
+    {
+        var employees = await _context.Employee.ToListAsync();
+
+        using var package = new ExcelPackage();
+        var worksheet = package.Workbook.Worksheets.Add("Employees");
+
+        var headers = new[]
+        {
+        "First Name", "Last Name", "Email", "Phone",
+        "Hire Date", "Date of Birth", "Address",
+        "CompanyId", "DepartmentId", "PositionId"
+    };
+
+        for (int i = 0; i < headers.Length; i++)
+            worksheet.Cells[1, i + 1].Value = headers[i];
+
+        for (int i = 0; i < employees.Count; i++)
+        {
+            var e = employees[i];
+            worksheet.Cells[i + 2, 1].Value = e.FirstName;
+            worksheet.Cells[i + 2, 2].Value = e.LastName;
+            worksheet.Cells[i + 2, 3].Value = e.Email;
+            worksheet.Cells[i + 2, 4].Value = e.Phone;
+            worksheet.Cells[i + 2, 5].Value = e.Hiredate?.ToString("yyyy-MM-dd");
+            worksheet.Cells[i + 2, 6].Value = e.DateOfBirth?.ToString("yyyy-MM-dd");
+            worksheet.Cells[i + 2, 7].Value = e.Address;
+            worksheet.Cells[i + 2, 8].Value = e.CompanyId;
+            worksheet.Cells[i + 2, 9].Value = e.DepartmentId;
+            worksheet.Cells[i + 2, 10].Value = e.PositionId;
+        }
+
+        return package.GetAsByteArray();
+    }
+
 
 }
