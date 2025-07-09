@@ -10,12 +10,15 @@ using Company.Repository.Employee.Models;
 using Company.Repository.Positions.Models;
 using Company.Repository.Projects.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Writers;
+using OfficeOpenXml;
+using OfficeOpenXml.Style;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 
 namespace Company.Data;
 
-public class DataCompany : ICopanyRepositoriy // ICopanyRepositoriy o‘rniga
+public class DataCompany : ICopanyRepositoriy 
 {
     private readonly dataContext.DbContextdta _context;
 
@@ -169,6 +172,47 @@ public class DataCompany : ICopanyRepositoriy // ICopanyRepositoriy o‘rniga
                 }).ToList()
             })
             .ToListAsync();
+    }
+
+    public async Task<byte[]> Print()
+    {
+        var company = await _context.Companies.ToListAsync();
+
+        var package = new ExcelPackage();
+        var worksheet = package.Workbook.Worksheets.Add("Copanies");
+
+        var headers = new[]
+        {
+            "Company Name", "Location", "Phone Numner",
+            "Founded Yer", "Created Adt", "Updated At"
+        };
+        for (int i = 0; i < headers.Length; i++)
+            worksheet.Cells[1, i + 1].Value = headers[i];
+
+        using (var range = worksheet.Cells[1, 1, 1, headers.Length])
+        {
+            range.Style.Font.Name = "Arial Black";
+            range.Style.Font.Size = 11;
+            range.Style.Font.Bold = true;
+            range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            range.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
+            range.Style.WrapText = false;
+        }
+
+        for (int i = 0; i < company.Count; i++)
+        {
+            var c = company[i];
+            int row = i + 2;
+            worksheet.Cells[row, 1].Value = c.Name;
+            worksheet.Cells[row, 2].Value = c.Location;
+            worksheet.Cells[row, 3].Value = c.PhoneNumber;
+            worksheet.Cells[row, 4].Value = c.FoundedYear?.ToString("MMMM dd, yyyy");
+            worksheet.Cells[row, 5].Value = c.CreatedAt.ToString("MMMM dd, yyyy");
+            worksheet.Cells[row, 6].Value = c.UpdatedAt.ToString("MMMM dd, yyyy");
+        }
+        worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
+
+        return package.GetAsByteArray();
     }
 
 }

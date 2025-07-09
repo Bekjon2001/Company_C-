@@ -1,12 +1,14 @@
 ﻿using Company.Dtos.FilterDto;
 using Company.Repository.Company;
 using Company.Repository.Company.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Company.Api.Controllers
 {
-    
+    [Authorize]
     [ApiController]
     [Route("api/[controller]/[action]")]
     public class CompaniesController : ControllerBase
@@ -73,6 +75,16 @@ namespace Company.Api.Controllers
         {
             var companies = await _repository.GetAllAsync(filter);
             return Ok(companies);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> Print()
+        {
+            var fileBytes = await _repository.Print();
+            return File(fileBytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "Company.xlsx");
+
         }
     }
 }

@@ -5,6 +5,7 @@ using Company.Repository.Employee;
 using Company.Repository.Employee.Models;
 using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
+using OfficeOpenXml.Style;
 
 namespace Company.Data;
 
@@ -151,7 +152,7 @@ public class DataEmployee : IEmployeeRepositoriy
         using var package = new ExcelPackage(stream);
         var worksheet = package.Workbook.Worksheets[0];
         int rowCount = worksheet.Dimension.Rows;
-
+        //int companyId = int.Parse(worksheet.Cells[row, 8].Text);
         var employees = new List<Employee>();
 
         for (int row = 2; row <= rowCount; row++)
@@ -162,14 +163,14 @@ public class DataEmployee : IEmployeeRepositoriy
                 LastName = worksheet.Cells[row, 2].Text,
                 Email = worksheet.Cells[row, 3].Text,
                 Phone = worksheet.Cells[row, 4].Text,
-                Hiredate = DateTime.TryParse(worksheet.Cells[row, 5].Text, out var hd) ? hd : null,
-                DateOfBirth = DateTime.TryParse(worksheet.Cells[row, 6].Text, out var dob) ? dob : null,
+                Hiredate = DateTime.TryParse(worksheet.Cells[row, 5].Text, out var hd) ? hd.ToUniversalTime() : null,
+                DateOfBirth = DateTime.TryParse(worksheet.Cells[row, 6].Text, out var dob) ? dob.ToUniversalTime() : null,
                 Address = worksheet.Cells[row, 7].Text,
                 CompanyId = int.Parse(worksheet.Cells[row, 8].Text),
                 DepartmentId = int.Parse(worksheet.Cells[row, 9].Text),
                 PositionId = int.Parse(worksheet.Cells[row, 10].Text),
-                CreatedAt = DateTime.Now,
-                UpdatedAt = DateTime.Now
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
             };
 
             employees.Add(employee);
@@ -181,20 +182,34 @@ public class DataEmployee : IEmployeeRepositoriy
 
     public async Task<byte[]> ExportToExcelAsync()
     {
-        var employees = await _context.Employee.ToListAsync();
+        var employees = await _context.Employee
+                .Include(e => e.Company)
+                .Include(e => e.Department)
+                .Include(e => e.Position)
+                .ToListAsync();
 
-        using var package = new ExcelPackage();
+        var package = new ExcelPackage();
         var worksheet = package.Workbook.Worksheets.Add("Employees");
 
         var headers = new[]
         {
         "First Name", "Last Name", "Email", "Phone",
         "Hire Date", "Date of Birth", "Address",
-        "CompanyId", "DepartmentId", "PositionId"
+        "Company Name", "Department Name", "Position Name"
     };
 
         for (int i = 0; i < headers.Length; i++)
             worksheet.Cells[1, i + 1].Value = headers[i];
+
+        using (var range = worksheet.Cells[1, 1, 1, headers.Length])
+        {
+            range.Style.Font.Name = "Arial Black";
+            range.Style.Font.Size = 11;
+            range.Style.Font.Bold = true;
+            range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            range.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
+            range.Style.WrapText = false;
+        }
 
         for (int i = 0; i < employees.Count; i++)
         {
@@ -206,10 +221,13 @@ public class DataEmployee : IEmployeeRepositoriy
             worksheet.Cells[i + 2, 5].Value = e.Hiredate?.ToString("yyyy-MM-dd");
             worksheet.Cells[i + 2, 6].Value = e.DateOfBirth?.ToString("yyyy-MM-dd");
             worksheet.Cells[i + 2, 7].Value = e.Address;
-            worksheet.Cells[i + 2, 8].Value = e.CompanyId;
-            worksheet.Cells[i + 2, 9].Value = e.DepartmentId;
-            worksheet.Cells[i + 2, 10].Value = e.PositionId;
+
+            worksheet.Cells[i + 2, 8].Value = e.Company?.Name?? "Noma'lum";
+            worksheet.Cells[i + 2, 9].Value = e.Department?.Name?? "Noma'lum";
+            worksheet.Cells[i + 2, 10].Value = e.Position?.PositionName?? "Noma'lum";
         }
+        //Afataman ustunlarni enga moslashtradi 
+        worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
 
         return package.GetAsByteArray();
     }

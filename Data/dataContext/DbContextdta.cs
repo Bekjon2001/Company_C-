@@ -23,6 +23,7 @@ namespace Company.Data.dataContext
             modelBuilder.Entity<AvtoGenerate.Entity.EmployeeProject>().ToTable("employeeprojects");
             modelBuilder.Entity<AvtoGenerate.Entity.Salarie>().ToTable("salaries");
             modelBuilder.Entity<AvtoGenerate.Entity.Leave>().ToTable("leaves");
+            modelBuilder.Entity<AvtoGenerate.Entity.UserAccount>().ToTable("user_accounts");
 
 
         }
@@ -34,5 +35,6 @@ namespace Company.Data.dataContext
         public DbSet<EmployeeProject> EmployeeProjects { get; set; }
          public DbSet<Salarie> Salaries { get; set; }
         public DbSet<Leave> Leaves { get; set; }
+        public DbSet<UserAccount> UserAccounts { get; set; }
     }
 }

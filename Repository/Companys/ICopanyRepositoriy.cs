@@ -14,4 +14,6 @@ public interface ICopanyRepositoriy
 
     CompanyDto GetById(int id);
     Task<List<CompanyDto>> GetAllAsync(CompanyFilterDto filter);
+
+    Task<byte[]> Print();
 }

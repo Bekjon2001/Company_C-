@@ -1,9 +1,11 @@
 ﻿using Company.Dtos.FilterDto;
 using Company.Repository.EmployeeProjects;
 using Company.Repository.EmployeeProjects.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Company.API;
+[Authorize]
 [Route("api/[controller]/[action]")]
 [ApiController]
 
@@ -61,5 +63,14 @@ public class EmployeeProjectController : Controller
     {
         var projects = _employeeProjectRepository.GetAll(filter);
         return Ok(projects);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Print()
+    {
+        var fileBytes = await _employeeProjectRepository.Print();
+        return File(fileBytes,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "EmployeeProject.xlsx");
     }
 }

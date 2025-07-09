@@ -20,6 +20,11 @@ using Company.Repository.Salaries;
 using Company.Mapping;
 using AutoMapper;
 using OfficeOpenXml;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using Company.Service.Atuh;
+using Company.Dost;
 //using OfficeOpenXml.LicenseContext; // 🔹 Litsenziya context uchun
 
 namespace Company
@@ -32,10 +37,13 @@ namespace Company
 
         public static void Main(string[] args)
         {
+
+            var hashed = PasswordHashHandlar.HashPaswword("123");
+            Console.WriteLine(hashed);
             // Serilog konfiguratsiyasi 
             Log.Logger = new LoggerConfiguration()
                 .WriteTo.Console()
-                .WriteTo.Seq("http://localhost:5341") // agar Seq o‘rnatilgan bo‘lsa
+                .WriteTo.Seq("http://localhost:5341") 
                 .CreateLogger();
 
             var builder = WebApplication.CreateBuilder(args);
@@ -44,13 +52,10 @@ namespace Company
             builder.Services.AddControllers()
                 .AddJsonOptions(options =>
                 {
+                    // 1. Default qiymatlarni yozmaslik
                     options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault;
-                });
 
-            //JSON serializationda format berish
-            builder.Services.AddControllers()
-                .AddJsonOptions(options =>
-                {
+                    // 2. DateOnly formatni qo‘llash
                     options.JsonSerializerOptions.Converters.Add(new DateOnlyJsonConverter());
                 });
 
@@ -90,6 +95,31 @@ namespace Company
                     Description = "API for managing company data"
                 });
 
+                // ✅ JWT Bearer token uchun konfiguratsiya
+                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                {
+                    Description = "JWT token kiriting. Format: Bearer {token}",
+                    Name = "Authorization",
+                    In = ParameterLocation.Header,
+                    Type = SecuritySchemeType.ApiKey,
+                    Scheme = "Bearer"
+                });
+
+                c.AddSecurityRequirement(new OpenApiSecurityRequirement
+                {
+                    {
+                        new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference
+                            {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "Bearer"
+                            }
+                        },
+                        Array.Empty<string>()
+                    }
+                });
+
                 // XML hujjatlarni qo‘shish
                 var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
                 var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
@@ -101,6 +131,8 @@ namespace Company
                 {
                     Console.WriteLine($"Warning: XML documentation file '{xmlPath}' not found.");
                 }
+
+
             });
 
             var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
@@ -123,6 +155,8 @@ namespace Company
             builder.Services.AddScoped<IPositionRepository, DataPosition>();
             builder.Services.AddScoped<IProjectRepository, DataProject>();
             builder.Services.AddScoped<ISalarieRepositoriy, DataSalarie>();
+            builder.Services.AddScoped<JwtService>();
+
 
             // CORS sozlamalari
             builder.Services.AddCors(options =>
@@ -135,9 +169,35 @@ namespace Company
                 });
             });
 
-            // ✅ EPPlus 8.x litsenziyasini o‘rnatish
+            //EPPlus 8.x litsenziyasini o‘rnatish
             //ExcelPackage.License = new EPPlusLicense("NonCommercial");
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+            //JwtBearer sozlamalari
+            builder.Services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+            }).AddJwtBearer(options =>
+            {
+                options.RequireHttpsMetadata = false;
+                options.SaveToken = true;
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidIssuer = builder.Configuration["JwtConfig:Issuer"],
+
+                    ValidateAudience = true,
+                    ValidAudience = builder.Configuration["JwtConfig:Audience"],
+
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(
+                                         Encoding.UTF8.GetBytes(builder.Configuration["JwtConfig:Key"]))
+                };
+            });
+            builder.Services.AddAuthorization();
 
             var app = builder.Build();
 
@@ -147,6 +207,8 @@ namespace Company
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
+            app.UseAuthentication();
+            app.UseAuthorization();
 
             app.UseSwagger();
             app.UseSwaggerUI(c =>
@@ -175,7 +237,7 @@ namespace Company
                 DataSeeder.Seed(dbContext);
             }
 
-            //app.Run();
+            app.Run();
         }
     }
 }

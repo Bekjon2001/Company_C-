@@ -3,12 +3,15 @@ using Company.Dtos.FilterDto;
 using Company.Repository.DtosExxsil;
 using Company.Repository.Employee;
 using Company.Repository.Employee.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace Company.API.EmployeeControllers;
+[Authorize]
 [Route("api/[controller]/[action]")]
 [ApiController]
+
 
 public class EmployeeController: ControllerBase
 {
@@ -72,7 +75,7 @@ public class EmployeeController: ControllerBase
     }
 
     [HttpPost]
-    [Consumes("multipart/form-data")] // ⚠️ Bu kerak!
+    [Consumes("multipart/form-data")] 
     public async Task<IActionResult> ImportExcel([FromForm] UploadExcelDto dto)
     {
         if (dto.File == null || dto.File.Length == 0)
@@ -90,8 +93,5 @@ public class EmployeeController: ControllerBase
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "Employees.xlsx");
     }
-
-
-
 
 }

@@ -10,4 +10,5 @@ public interface ILeaveRepositrory
     bool Delete(int id);
     LeaveDto GetById(int id);
     List<LeaveDto> GetAll( LeaveFilterDto filter );
+    Task<byte[]> Print();
 }

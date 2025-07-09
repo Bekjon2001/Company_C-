@@ -5,6 +5,8 @@ using Company.Dtos.FilterDto;
 using Company.Repository.EmployeeProjects;
 using Company.Repository.EmployeeProjects.Models;
 using Microsoft.EntityFrameworkCore;
+using OfficeOpenXml;
+using OfficeOpenXml.Style;
 
 namespace Company.Data
 {
@@ -97,6 +99,52 @@ namespace Company.Data
             ? ep.Employee.FirstName + " " + ep.Employee.LastName
             : null
                 }).ToList();
+        }
+
+        public async Task<byte[]> Print()
+        {
+            var emloyeeProject = await _context.EmployeeProjects
+                .Include(e => e.Employee)
+                .Include(p => p.Project)
+                .ToListAsync();
+
+
+            var package = new ExcelPackage();
+            var worksheet = package.Workbook.Worksheets.Add("EmployeeProject");
+
+            var headers = new[]
+            {
+               "EmployeeProjectId", "ProjectId", "Project Name","EmployeeId","Full Name"
+            };
+            for (int i = 0; i < headers.Length; i++)
+                worksheet.Cells[1, i + 1].Value = headers[i];
+
+            using (var range = worksheet.Cells[1, 1, 1, headers.Length])
+            {
+                range.Style.Font.Name = "Arial Black";
+                range.Style.Font.Size = 11;
+                range.Style.Font.Bold = true;
+                range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                range.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
+                range.Style.WrapText = false;
+            }
+
+            for (int i = 0;i < emloyeeProject.Count; i++)
+            {
+                var e = emloyeeProject[i];
+                var row = i + 2;
+
+                worksheet.Cells[row, 1].Value = e.EmployeeProjectId;
+                worksheet.Cells[row, 2].Value = e.ProjectId;
+                worksheet.Cells[row, 3].Value = e.Project?.ProjectName?? "Noma'lum";
+                worksheet.Cells[row, 4].Value = e.EmployeeId;
+                worksheet.Cells[row, 5].Value = e.Employee?.FirstName + " " + e.Employee.LastName;
+
+            }
+            worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
+
+            return package.GetAsByteArray();
+
         }
     }
 }

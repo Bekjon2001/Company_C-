@@ -11,4 +11,5 @@ public interface IPositionRepository
     bool Delete(int id);
     PositionDto GetById(int id);
     List<PositionDto> GetAll(PositionFilterDto filter);
+    Task<byte[]> Print();
 }

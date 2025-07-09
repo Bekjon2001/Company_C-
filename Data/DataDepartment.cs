@@ -4,6 +4,8 @@ using Company.Dtos.FilterDto;
 using Company.Repository.Departments;
 using Company.Repository.Departments.Models;
 using Microsoft.EntityFrameworkCore;
+using OfficeOpenXml;
+using OfficeOpenXml.Style;
 
 namespace Company.Data
 {
@@ -112,6 +114,45 @@ namespace Company.Data
 
 
 
+
+        }
+
+        public async Task<byte[]> Print()
+        {
+            var department = await _context.Departments.Include(e => e.Company).ToListAsync();
+            
+            var package = new ExcelPackage();
+            var worksheet = package.Workbook.Worksheets.Add("Department");
+
+            var headers = new[] { "Department Name", "CompanyId", "Company Name", "Created Adt", "Updated At" };
+
+            for (int i = 0; i < headers.Length; i++)
+                worksheet.Cells[1, i + 1].Value = headers[i];
+
+            using (var range = worksheet.Cells[1, 1, 1, headers.Length])
+            {
+                range.Style.Font.Name = "Arial Black";
+                range.Style.Font.Size = 11;
+                range.Style.Font.Bold = true;
+                range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                range.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
+                range.Style.WrapText = false;
+            }
+
+            for (int i = 0; i < department.Count;i++)
+            {
+                var d = department[i];
+                int row = i + 2;
+
+                worksheet.Cells[row,1].Value = d.Name;
+                worksheet.Cells[row, 2].Value = d.CompanyId;
+                worksheet.Cells[row, 3].Value = d.Company?.Name?? "Noma'lum";
+                worksheet.Cells[row, 4].Value = d.CreatedAt.ToString("g");
+                worksheet.Cells[row,5].Value = d.UpdatedAt.ToString("g");
+            }
+            worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
+
+            return package.GetAsByteArray();
 
         }
     }

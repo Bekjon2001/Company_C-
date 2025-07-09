@@ -1,10 +1,12 @@
 ﻿using Company.Dtos.FilterDto;
 using Company.Repository.Leaves;
 using Company.Repository.Leaves.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Company.API;
 
+[Authorize]
 [Route("api/[controller]/[action]")]
 [ApiController]
 
@@ -68,5 +70,14 @@ public class LeaveController : ControllerBase
         if (!ok)
             return NotFound();
         return NoContent();
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Print()
+    {
+        var fileBytes = await _leaveRepositrory.Print();
+        return File(fileBytes,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "Leave.xlsx");
     }
 }

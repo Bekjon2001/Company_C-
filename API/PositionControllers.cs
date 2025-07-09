@@ -2,11 +2,12 @@
 using Company.Dtos.FilterDto;
 using Company.Repository.Positions;
 using Company.Repository.Positions.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
+//using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace Company.API.PositionControllers;
-
+[Authorize]
 [Route("api/[controller]/[action]")]
 [ApiController]
 
@@ -68,5 +69,14 @@ public class PositionController : ControllerBase
     {
         var result = _positionRepository.GetAll(filter);
         return Ok(result);
+    }
+    [HttpGet]
+    public async Task<IActionResult> Print()
+    {
+        var fileBytes = await _positionRepository.Print();
+        return File(fileBytes,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "Position.xlsx");
+
     }
 }

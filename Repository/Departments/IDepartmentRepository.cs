@@ -14,4 +14,6 @@ public interface IDepartmentRepository
     DepartmentDto GetById(int id);
 
     List<DepartmentDto> GetAll( DepartmentFilterDto filter);
+
+    Task<byte[]> Print();
 }

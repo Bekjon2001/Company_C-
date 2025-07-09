@@ -5,6 +5,8 @@ using Company.Dtos.FilterDto;
 using Company.Repository.Salaries;
 using Company.Repository.Salaries.Models;
 using Microsoft.EntityFrameworkCore;
+using OfficeOpenXml;
+using OfficeOpenXml.Style;
 
 namespace Company.Data
 {
@@ -102,6 +104,55 @@ namespace Company.Data
                     EmployeeFullName = s.Employee != null ? $"{s.Employee.FirstName} {s.Employee.LastName}" : null
                 })
                 .ToList();
+        }
+
+        public async Task<byte[]> Print()
+        {
+            var salarie = await _context.Salaries.
+                Include(x => x.Employee)
+                .ToListAsync();
+
+            var package = new ExcelPackage();
+
+            var worksheet = package.Workbook.Worksheets.Add("Salarie");
+
+            var headers = new[]
+            {
+                "SalariId","EployeeId","Full Name","Amount", "Start Ad",
+                "Created Adt", "Updated At"
+            };
+            for (int i = 0; i < headers.Length; i++)
+            {
+                worksheet.Cells[1, i +1].Value = headers[i];
+            }
+
+            using (var range = worksheet.Cells[1, 1, 1, headers.Length])
+            {
+                range.Style.Font.Name = "Arial Black";
+                range.Style.Font.Size = 11;
+                range.Style.Font.Bold = true;
+                range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                range.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
+                range.Style.WrapText = false;
+            }
+
+            for (int i = 0; i < salarie.Count; i++)
+            {
+                var s = salarie[i];
+                var row = i + 2;
+
+                worksheet.Cells[row, 1].Value = s.SalaryId;
+                worksheet.Cells[row, 2].Value = s.EmployeeId;
+                worksheet.Cells[row, 3].Value = s.Employee?.FirstName + " " + s.Employee?.LastName;
+                worksheet.Cells[row, 4].Value = s.Amount;
+                worksheet.Cells[row, 5].Value = s.StartDate.ToString("g");
+                worksheet.Cells[row, 6].Value = s.CreatedAt.ToString("g");
+                worksheet.Cells[row, 7].Value = s.UpdatedAt.ToString("g");
+            }
+            worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
+
+            return package.GetAsByteArray();
+
         }
 
     }

@@ -5,6 +5,8 @@ using Company.Dtos.FilterDto;
 using Company.Repository.Projects;
 using Company.Repository.Projects.Models;
 using Microsoft.EntityFrameworkCore;
+using OfficeOpenXml;
+using OfficeOpenXml.Style;
 
 namespace Company.Data;
 
@@ -108,6 +110,55 @@ public class DataProject:IProjectRepository
         }).ToList();
 
         return result;
+    }
+
+    public async Task<byte[]> Print()
+    {
+        var project = await _context.Projects
+            .Include(p => p.Company)
+            .ToListAsync();
+
+        var package = new ExcelPackage();
+
+        var worksheet = package.Workbook.Worksheets.Add("Project");
+
+        var headers = new[]
+        {
+            "ProjectId", "Project Namne", "Project Description",
+            "Start Ad", "Ent Ad", "CompanyId", "Company Name",
+            "Created Adt", "Updated At"
+        };
+        for(int i = 0; i < headers.Length; i++)
+        {
+            worksheet.Cells[1, i +1].Value = headers[i];
+        }
+            using (var range = worksheet.Cells[1, 1, 1, headers.Length])
+            {
+                range.Style.Font.Name = "Arial Black";
+                range.Style.Font.Size = 11;
+                range.Style.Font.Bold = true;
+                range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                range.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
+                range.Style.WrapText = false;
+            }
+
+        for (int i = 0; i < project.Count; ++i)
+        {
+            var p = project[i];
+            var row = i + 2;
+            worksheet.Cells[row, 1].Value = p.ProjectId;
+            worksheet.Cells[row, 2].Value = p.ProjectName;
+            worksheet.Cells[row, 3].Value = p.Description;
+            worksheet.Cells[row, 4].Value = p.StartDate?.ToString("g");
+            worksheet.Cells[row, 5].Value = p.EndDate?.ToString("g");
+            worksheet.Cells[row, 6].Value = p.CompanyId;
+            worksheet.Cells[row, 7].Value = p.Company?.Name;
+            worksheet.Cells[row, 8].Value = p.CreatedAt.ToString("g");
+            worksheet.Cells[row,9].Value = p.UpdatedAt.ToString("g");
+        }
+        worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
+
+        return package.GetAsByteArray();
     }
 
 

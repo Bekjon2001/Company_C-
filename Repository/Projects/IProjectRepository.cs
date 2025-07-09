@@ -10,4 +10,5 @@ public interface IProjectRepository
     bool Delete(int id);
     ProjectDto GetById(int id);
     List<ProjectDto> GetAll(ProjectFilterDto filter);
+    Task<byte[]> Print();
 }

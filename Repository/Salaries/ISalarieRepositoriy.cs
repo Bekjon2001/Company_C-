@@ -10,4 +10,8 @@ public interface ISalarieRepositoriy
     bool Delete(int id);
     SalarieDto GetById(int id);
     List<SalarieDto> GetAll( SalarieFilterDto filter );
+
+    Task<byte[]> Print();
+
+
 }

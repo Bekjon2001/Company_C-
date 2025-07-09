@@ -2,9 +2,11 @@
 using Company.Repository.Company.Models;
 using Company.Repository.Departments;
 using Company.Repository.Departments.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Company.API.DepartmentControllers;
+[Authorize]
 [Route("api/[controller]/[action]")]
 [ApiController]
 public class DepartmentController : ControllerBase
@@ -65,5 +67,14 @@ public class DepartmentController : ControllerBase
     {
         var companies = _departmentsRepository.GetAll(filter);
         return Ok(companies);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> Print()
+    {
+        var fileBytes = await _departmentsRepository.Print();
+        return File(fileBytes,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "Department.xlsx");
     }
 }

@@ -10,5 +10,9 @@ public interface IEmployeeProjectRepository
     bool Delete(int id);
     EmployeeProjectDto GetById(int id);
     List<EmployeeProjectDto>GetAll(EmployeeProjectFilterDto filter);
+    Task<byte[]> Print();
+
+
+
 }
     

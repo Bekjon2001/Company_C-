@@ -69,4 +69,13 @@ public class SalarieController : ControllerBase
 
         return NoContent();
     }
+
+    [HttpGet]
+    public async Task<IActionResult> Print()
+    {
+        var fileBytes = await _salarieRepositoriy.Print();
+        return File(fileBytes,
+           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+           "Salarie.xlsx");
+    }
 }

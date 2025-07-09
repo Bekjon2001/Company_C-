@@ -5,6 +5,8 @@ using Company.Dtos.FilterDto;
 using Company.Repository.Leaves;
 using Company.Repository.Leaves.Models;
 using Microsoft.EntityFrameworkCore;
+using OfficeOpenXml;
+using OfficeOpenXml.Style;
 
 namespace Company.Data;
 
@@ -108,6 +110,51 @@ public class DataLeave : ILeaveRepositrory
                     : null
             })
             .ToList();
+    }
+
+    public async Task<byte[]> Print()
+    {
+        var leave = await _context.Leaves.
+             Include(e => e.Employee)
+            .ToListAsync();
+
+        var package = new ExcelPackage();
+
+        var worksheet = package.Workbook.Worksheets.Add("Leave");
+        var headers = new[]
+        {
+                "LeaveId", "EmployeeId","Full Name","Reason",
+                "Star Date","Ent Date","Created Adt", "Updated At"
+        };
+        for(int i  = 0; i < headers.Length; i++)
+            worksheet.Cells[1, i + 1].Value = headers[i];
+
+        using (var range = worksheet.Cells[1, 1, 1, headers.Length])
+        {
+            range.Style.Font.Name = "Arial Black";
+            range.Style.Font.Size = 11;
+            range.Style.Font.Bold = true;
+            range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            range.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
+            range.Style.WrapText = false;
+        }
+        for(int i = 0; i < leave.Count; i++)
+        {
+            var l = leave[i];
+            var row = i +2;
+            worksheet.Cells[row, 1].Value = l.LeaveId;
+            worksheet.Cells[row, 2].Value = l.EmployeeId;
+            worksheet.Cells[row, 3].Value = l.Employee?.FirstName + " " + l.Employee?.LastName;
+            worksheet.Cells[row, 4].Value = l.Reason;
+            worksheet.Cells[row, 5].Value = l.StartDate?.ToString("g");
+            worksheet.Cells[row,6].Value = l.EndDate?.ToString("g");
+            worksheet.Cells[row,7].Value = l.CreatedAt.ToString("g");
+            worksheet.Cells[row,8].Value = l.UpdatedAt.ToString("g");
+
+        }
+        worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
+
+        return package.GetAsByteArray();
     }
 
 }
